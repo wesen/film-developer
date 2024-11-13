@@ -84,7 +84,7 @@ typedef struct {
  */
 typedef struct AgitationMovement AgitationMovement;
 
-struct AgitationMovement {
+struct AgitationMovement_ {
     AgitationMovementType type;
     union {
         // For regular movements
@@ -92,7 +92,7 @@ struct AgitationMovement {
         // For loops
         struct {
             uint32_t count;
-            struct AgitationMovement* sequence;
+            struct AgitationMovement_* sequence;
             size_t sequence_length;
         } loop;
     };
@@ -105,7 +105,7 @@ typedef struct {
     FuriString* name;
     FuriString* description;
     float temperature;
-    AgitationMovement* sequence;
+    AgitationMovement_* sequence;
     size_t sequence_length;
 } AgitationStep;
 
@@ -185,12 +185,12 @@ AgitationStep* agitation_step_alloc();
 void agitation_step_free(AgitationStep* step);
 
 void agitation_sequence_add_movement(
-    AgitationMovement** sequence,
+    AgitationMovement_** sequence,
     size_t* length,
     AgitationMovementType type,
     uint32_t duration);
 
-uint32_t agitation_sequence_get_duration(AgitationMovement* sequence, size_t length);
-bool agitation_sequence_validate(AgitationMovement* sequence, size_t length);
+uint32_t agitation_sequence_get_duration(AgitationMovement_* sequence, size_t length);
+bool agitation_sequence_validate(AgitationMovement_* sequence, size_t length);
 AgitationProcess* agitation_process_from_yaml(const char* yaml_content);
 FuriString* agitation_process_to_yaml(AgitationProcess* process);

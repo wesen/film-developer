@@ -1,33 +1,27 @@
 #pragma once
+#include <furi_hal_gpio.h>
 
 class MotorController {
 public:
-    MotorController() : is_running_(false), direction_(0) {}
+    MotorController();
+    ~MotorController();
 
-    void start_clockwise() {
-        is_running_ = true;
-        direction_ = 1;
-    }
+    // Prevent copying
+    MotorController(const MotorController&) = delete;
+    MotorController& operator=(const MotorController&) = delete;
 
-    void start_counter_clockwise() {
-        is_running_ = true;
-        direction_ = -1;
-    }
-
-    void stop() {
-        is_running_ = false;
-        direction_ = 0;
-    }
-
-    bool is_running() const { return is_running_; }
-    int get_direction() const { return direction_; }
-
-    static MotorController& instance() {
-        static MotorController instance;
-        return instance;
-    }
+    void clockwise(bool enable);
+    void counterClockwise(bool enable);
+    void stop();
+    bool isRunning() const { return running; }
 
 private:
-    bool is_running_;
-    int direction_;  // 1 for CW, -1 for CCW, 0 for stopped
+    static constexpr uint32_t SAFETY_DELAY_US = 1000; // 1ms safety delay
+
+    const GpioPin* pin_cw;
+    const GpioPin* pin_ccw;
+    bool running{false};
+
+    void initGpio();
+    void deinitGpio();
 }; 
