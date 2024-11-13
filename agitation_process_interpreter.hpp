@@ -68,4 +68,5 @@ private:
   uint32_t time_remaining;
 
   bool movement_completed_previous_tick;
+  bool movement_completed;
 };

@@ -10,7 +10,7 @@ AgitationProcessInterpreter::AgitationProcessInterpreter()
       process_state(AgitationProcessState::Idle), current_temperature(20.0f),
       target_temperature(20.0f), motor_controller(nullptr),
       movement_loader(movement_factory), sequence_length(0),
-      current_movement_index(0), time_remaining(0) {
+      current_movement_index(0), time_remaining(0), movement_completed(false) {
   memset(loaded_sequence, 0, sizeof(loaded_sequence));
 }
 
@@ -23,6 +23,7 @@ void AgitationProcessInterpreter::init(const AgitationProcessStatic *process,
 
   current_temperature = 20.0f;
   target_temperature = process->temperature;
+  movement_completed = false;
 
   sequence_length = 0;
   current_movement_index = 0;
@@ -71,6 +72,17 @@ bool AgitationProcessInterpreter::tick() {
     return false;
   }
 
+  if (movement_completed) {
+    advanceToNextMovement();
+    movement_completed = false;
+
+    if (current_movement_index >= sequence_length) {
+      DEBUG_PRINT("Movement sequence completed, advancing to next step\n");
+      advanceToNextStep();
+      return true;
+    }
+  }
+
   const AgitationStepStatic *current_step = &process->steps[current_step_index];
   target_temperature = current_step->temperature;
 
@@ -90,21 +102,16 @@ bool AgitationProcessInterpreter::tick() {
         loaded_sequence[current_movement_index];
 
     if (current_movement) {
+      movement_active = current_movement->execute(*motor_controller);
+
       if (current_movement->getType() == AgitationMovement::Type::WaitUser) {
         return true;
       }
 
-      movement_active = current_movement->execute(*motor_controller);
-
       if (!movement_active) {
-        advanceToNextMovement();
+        movement_completed = true;
       }
     }
-  }
-
-  if (!movement_active && current_movement_index >= sequence_length) {
-    DEBUG_PRINT("Movement sequence completed, advancing to next step\n");
-    advanceToNextStep();
   }
 
   return movement_active || current_step_index < process->steps_length;
