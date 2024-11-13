@@ -6,14 +6,22 @@
 #include "agitation_sequence.hpp"
 #include "agitation_processes.hpp"
 #include "agitation_process_interpreter.hpp"
+#include "motor_controller.hpp"
 
-#include "io.h"
+#ifdef HOST
+#include "test-film_developer/mock_controller.hpp"
+#else
+#include "embedded/motor_controller_embedded.hpp"
+#endif
 
 typedef struct {
     FuriEventLoop* event_loop;
     ViewPort* view_port;
     Gui* gui;
     FuriEventLoopTimer* state_timer;
+
+    // Add motor controller
+    MotorController* motor_controller;
 
     // Process state
     AgitationProcessInterpreterState process_state;
@@ -28,6 +36,19 @@ typedef struct {
     // Additional state tracking
     bool paused;
 } FilmDeveloperApp;
+
+// Add motor control callback wrappers
+static void motor_cw_callback(bool enable) {
+    FilmDeveloperApp* app = static_cast<FilmDeveloperApp*>(furi_record_open("film_developer"));
+    app->motor_controller->clockwise(enable);
+    furi_record_close("film_developer");
+}
+
+static void motor_ccw_callback(bool enable) {
+    FilmDeveloperApp* app = static_cast<FilmDeveloperApp*>(furi_record_open("film_developer"));
+    app->motor_controller->counterClockwise(enable);
+    furi_record_close("film_developer");
+}
 
 static void draw_callback(Canvas* canvas, void* context) {
     FilmDeveloperApp* app = (FilmDeveloperApp*)context;
@@ -61,10 +82,10 @@ static void draw_callback(Canvas* canvas, void* context) {
 
     // Draw pin states
     canvas_draw_str(canvas, 2, 60, "CW:");
-    canvas_draw_str(canvas, 50, 60, !furi_hal_gpio_read(pin_cw) ? "ON" : "OFF");
+    canvas_draw_str(canvas, 50, 60, app->motor_controller->isRunning() ? "ON" : "OFF");
 
     canvas_draw_str(canvas, 2, 70, "CCW:");
-    canvas_draw_str(canvas, 50, 70, !furi_hal_gpio_read(pin_ccw) ? "ON" : "OFF");
+    canvas_draw_str(canvas, 50, 70, app->motor_controller->isRunning() ? "ON" : "OFF");
 
     // Draw control hints
     if(app->process_active) {
@@ -86,7 +107,6 @@ static void timer_callback(void* context) {
     FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
     if(app->process_active && !app->paused) {
-        // Tick the process interpreter
         bool still_active = agitation_process_interpreter_tick(&app->process_state);
 
         // Update status texts
@@ -133,18 +153,16 @@ static void timer_callback(void* context) {
                 app->process_state.movement_interpreter.time_remaining);
         }
 
-        // Update movement text based on current state (remember active low)
+        // Update movement text based on motor controller state
         const char* movement_str = "Idle";
-        if(!furi_hal_gpio_read(pin_cw)) {
-            movement_str = "Clockwise";
-        } else if(!furi_hal_gpio_read(pin_ccw)) {
-            movement_str = "Counter-CW";
+        if(app->motor_controller->isRunning()) {
+            movement_str = "Running"; // You may want to add direction detection to MotorController
         }
         snprintf(app->movement_text, sizeof(app->movement_text), "Movement: %s", movement_str);
 
         app->process_active = still_active;
         if(!still_active) {
-            motor_stop(); // Ensure motors are stopped when process ends
+            app->motor_controller->stop();
         }
     }
 
@@ -161,6 +179,7 @@ static void input_callback(InputEvent* input_event, void* context) {
                 agitation_process_interpreter_init(
                     &app->process_state,
                     &C41_FULL_PROCESS_STATIC,
+                    app->motor_controller, // Pass motor controller
                     motor_cw_callback,
                     motor_ccw_callback);
                 app->process_active = true;
@@ -172,13 +191,13 @@ static void input_callback(InputEvent* input_event, void* context) {
                 // Toggle pause
                 app->paused = !app->paused;
                 if(app->paused) {
-                    motor_stop();
+                    app->motor_controller->stop();
                 }
             }
         } else if(app->process_active && input_event->key == InputKeyRight) {
             // Skip to next step (only if not waiting for user)
             if(!app->process_state.waiting_for_user) {
-                motor_stop();
+                app->motor_controller->stop();
                 app->process_state.current_step_index++;
                 app->process_state.process_state = AgitationProcessStateIdle;
                 if(app->process_state.current_step_index >= app->current_process->steps_length) {
@@ -187,7 +206,7 @@ static void input_callback(InputEvent* input_event, void* context) {
             }
         } else if(app->process_active && input_event->key == InputKeyLeft) {
             // Restart current step
-            motor_stop();
+            app->motor_controller->stop();
             agitation_process_interpreter_init(
                 &app->process_state, app->current_process, motor_cw_callback, motor_ccw_callback);
             app->process_state.current_step_index =
@@ -198,7 +217,7 @@ static void input_callback(InputEvent* input_event, void* context) {
             // Stop process
             app->process_active = false;
             app->paused = false;
-            motor_stop();
+            app->motor_controller->stop();
         } else {
             furi_event_loop_stop(app->event_loop);
         }
@@ -213,8 +232,15 @@ int32_t film_developer_app(void* p) {
     UNUSED(p);
     FilmDeveloperApp* app = (FilmDeveloperApp*)malloc(sizeof(FilmDeveloperApp));
 
-    // Initialize GPIO
-    gpio_init();
+    // Create appropriate motor controller
+#ifdef HOST
+    app->motor_controller = new MockController();
+#else
+    app->motor_controller = new MotorControllerEmbedded();
+#endif
+
+    // Register app instance for callbacks
+    furi_record_create("film_developer", app);
 
     // Create event loop
     app->event_loop = furi_event_loop_alloc();
@@ -251,7 +277,11 @@ int32_t film_developer_app(void* p) {
     view_port_free(app->view_port);
     furi_record_close(RECORD_GUI);
     furi_event_loop_free(app->event_loop);
-    gpio_deinit();
+
+    // Clean up motor controller
+    delete app->motor_controller;
+    furi_record_destroy("film_developer");
+
     free(app);
 
     return 0;

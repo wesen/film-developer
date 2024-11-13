@@ -1,24 +1,29 @@
 #pragma once
 
+#include "movement/movement.hpp"
+#include "movement/movement_loader.hpp"
+#include <stddef.h>
+#include <stdint.h>
 #include "agitation_sequence.hpp"
+#include "motor_controller.hpp"
 
-#define MAX_LOOP_DEPTH  3
+#define MAX_LOOP_DEPTH 3
 #define LOOP_CONTINUOUS 0
 
 typedef struct LoopState {
-    const AgitationMovementStatic* sequence;
+    AgitationMovement** sequence;
     size_t sequence_length;
     uint32_t remaining_iterations;
     size_t start_index;
     uint32_t original_count;
-    uint32_t elapsed_duration; // Track elapsed time
-    uint32_t max_duration; // Maximum duration for this loop
-    bool stop; // Stop the loop
+    uint32_t elapsed_duration;
+    uint32_t max_duration;
+    bool stop;
 } LoopState;
 
 typedef struct AgitationInterpreterState {
     // Current execution context
-    const AgitationMovementStatic* current_sequence;
+    AgitationMovement** current_sequence;
     size_t sequence_length;
     size_t current_index;
 
@@ -26,13 +31,16 @@ typedef struct AgitationInterpreterState {
     LoopState loop_stack[MAX_LOOP_DEPTH];
     uint8_t loop_depth;
 
-    // Current movement details
-    AgitationMovementType current_movement;
+    // Current movement tracking
+    AgitationMovement::Type current_movement;
     uint32_t time_remaining;
 
-    // Callback for motor control
-    void (*motor_cw_callback)(bool enable);
-    void (*motor_ccw_callback)(bool enable);
+    // Motor controller instance
+    MotorController* motor_controller;
+
+    // Legacy callback support for backwards compatibility
+    void (*motor_cw_callback)(bool);
+    void (*motor_ccw_callback)(bool);
 } AgitationInterpreterState;
 
 // Initialize the interpreter state
@@ -40,6 +48,7 @@ void agitation_interpreter_init(
     AgitationInterpreterState* state,
     const struct AgitationMovementStatic* sequence,
     size_t sequence_length,
+    MotorController* motor_controller,
     void (*motor_cw)(bool),
     void (*motor_ccw)(bool));
 

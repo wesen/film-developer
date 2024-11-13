@@ -4,10 +4,11 @@
 class PauseMovement final : public AgitationMovement {
 public:
     explicit PauseMovement(uint32_t duration)
-        : AgitationMovement(Type::Pause, duration) {}
+        : AgitationMovement(Type::Pause, duration) {
+    }
 
     bool execute(MotorController& motor) override {
-        if (elapsed_time >= duration) {
+        if(elapsed_time >= duration) {
             return false;
         }
 
@@ -23,4 +24,8 @@ public:
     void reset() override {
         elapsed_time = 0;
     }
-}; 
+
+    void print() const override {
+        DEBUG_PRINT("PauseMovement: duration %u ticks (elapsed: %u)", duration, elapsed_time);
+    }
+};

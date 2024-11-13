@@ -1,18 +1,15 @@
 #include <string.h>
 #include <stdio.h>
+#include <memory>
 #include "agitation_process_interpreter.hpp"
+#include "motor_controller.hpp"
 
-#define DEBUG 1
-
-#ifdef DEBUG
-#define DEBUG_PRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
-#else
-#define DEBUG_PRINT(fmt, ...)
-#endif
+#include "debug.hpp"
 
 void agitation_process_interpreter_init(
     AgitationProcessInterpreterState* state,
     const AgitationProcessStatic* process,
+    MotorController*,
     void (*motor_cw)(bool),
     void (*motor_ccw)(bool)) {
     // Clear state
@@ -23,23 +20,23 @@ void agitation_process_interpreter_init(
     state->current_step_index = 0;
     state->process_state = AgitationProcessStateIdle;
 
-    // Set callbacks
+    // Set motor callbacks
     state->motor_cw_callback = motor_cw;
     state->motor_ccw_callback = motor_ccw;
 
     // Set initial temperature tracking
-    state->current_temperature = 20.0f; // Room temperature
+    state->current_temperature = 20.0f;
     state->target_temperature = process->temperature;
 
     // Initialize user interaction state
     state->waiting_for_user = false;
-    state->user_message = NULL;
+    state->user_message = nullptr;
 
     DEBUG_PRINT("Process Interpreter Initialized:\n");
     DEBUG_PRINT("  Process Name: %s\n", process->process_name);
     DEBUG_PRINT("  Film Type: %s\n", process->film_type);
     DEBUG_PRINT("  Total Steps: %zu\n", process->steps_length);
-    DEBUG_PRINT("  Initial Temperature: %.1f\n", (double)state->target_temperature);
+    DEBUG_PRINT("  Initial Temperature: %.1f\n", static_cast<double>(state->target_temperature));
 }
 
 bool agitation_process_interpreter_tick(AgitationProcessInterpreterState* state) {
@@ -50,58 +47,57 @@ bool agitation_process_interpreter_tick(AgitationProcessInterpreterState* state)
         return false;
     }
 
-    // If waiting for user, don't advance the process
+    // Handle user interaction state
     if(state->waiting_for_user) {
         return true;
     }
 
     // Get current step
     const AgitationStepStatic* current_step = &state->process->steps[state->current_step_index];
-
-    // Update temperature tracking
     state->target_temperature = current_step->temperature;
 
-    // Initialize movement interpreter for first time or if previous step completed
+    // Initialize or reinitialize movement interpreter if needed
     if(state->process_state == AgitationProcessStateIdle ||
        state->process_state == AgitationProcessStateComplete) {
-        DEBUG_PRINT("Initializing Movement Interpreter for Step\n");
         DEBUG_PRINT(
-            "Processing Step %zu: %s\n",
+            "Initializing Movement Interpreter for Step %zu: %s\n",
             state->current_step_index,
             current_step->name ? current_step->name : "Unnamed Step");
         DEBUG_PRINT(
             "  Description: %s\n",
             current_step->description ? current_step->description : "No description");
-        DEBUG_PRINT("  Step Temperature: %.1f\n", (double)current_step->temperature);
+        DEBUG_PRINT("  Step Temperature: %.1f\n", static_cast<double>(current_step->temperature));
 
         agitation_interpreter_init(
             &state->movement_interpreter,
             current_step->sequence,
             current_step->sequence_length,
+            NULL,
             state->motor_cw_callback,
             state->motor_ccw_callback);
         state->process_state = AgitationProcessStateRunning;
     }
 
-    // Tick the movement interpreter
+    // Process movement
     bool movement_active = agitation_interpreter_tick(&state->movement_interpreter);
 
-    // Check if we've hit a wait for user movement
-    if(movement_active && 
+    // Check for user interaction requirements
+    if(movement_active &&
        state->movement_interpreter.current_index < state->movement_interpreter.sequence_length) {
-        const AgitationMovementStatic* current_movement = 
-            &state->movement_interpreter.current_sequence[state->movement_interpreter.current_index];
-        
-        if(current_movement->type == AgitationMovementTypeWaitUser) {
+        const AgitationMovement* current_movement =
+            state->movement_interpreter.current_sequence[state->movement_interpreter.current_index];
+
+        if(current_movement->getType() == AgitationMovement::Type::WaitUser) {
             state->waiting_for_user = true;
-            state->user_message = current_movement->message;
+            // state->user_message = current_movement->getMessage();
+            state->user_message = "STANDIN MESSAGE";
             return true;
         }
     }
 
-    // If movement is no longer active, move to next step
+    // Handle step completion
     if(!movement_active) {
-        DEBUG_PRINT("Movement completed, moving to next step\n");
+        DEBUG_PRINT("Movement completed, advancing to next step\n");
         state->current_step_index++;
         state->process_state = AgitationProcessStateIdle;
 
@@ -115,14 +111,13 @@ bool agitation_process_interpreter_tick(AgitationProcessInterpreterState* state)
 
 void agitation_process_interpreter_reset(AgitationProcessInterpreterState* state) {
     agitation_process_interpreter_init(
-        state, state->process, state->motor_cw_callback, state->motor_ccw_callback);
+        state, state->process, NULL, state->motor_cw_callback, state->motor_ccw_callback);
 }
 
 void agitation_process_interpreter_confirm(AgitationProcessInterpreterState* state) {
     if(state->waiting_for_user) {
         state->waiting_for_user = false;
-        state->user_message = NULL;
-        // Advance past the wait movement
+        state->user_message = nullptr;
         state->movement_interpreter.current_index++;
     }
 }

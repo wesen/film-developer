@@ -22,6 +22,11 @@ public:
         user_acknowledged = true;
     }
 
+    void print() const override {
+        DEBUG_PRINT("WaitUserMovement: %s", 
+            user_acknowledged ? "acknowledged" : "waiting");
+    }
+
 private:
     bool user_acknowledged{false};
 }; 

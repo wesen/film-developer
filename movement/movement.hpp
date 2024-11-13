@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "../motor_controller.hpp"
+#include "../debug.hpp"
 
 class AgitationMovement {
 public:
@@ -20,6 +21,7 @@ public:
     virtual bool execute(MotorController& motor) = 0;
     virtual bool isComplete() const = 0;
     virtual void reset() = 0;
+    virtual void print() const = 0;
 
     Type getType() const { return type; }
     uint32_t getDuration() const { return duration; }

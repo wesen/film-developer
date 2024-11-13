@@ -33,4 +33,11 @@ public:
     void reset() override {
         elapsed_time = 0;
     }
+
+    void print() const override {
+        DEBUG_PRINT("MotorMovement: %s for %u ticks (elapsed: %u)", 
+            type == Type::CW ? "CW" : "CCW",
+            duration,
+            elapsed_time);
+    }
 }; 

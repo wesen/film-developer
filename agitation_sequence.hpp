@@ -1,16 +1,38 @@
 #pragma once
 
-#include <stdbool.h>
-
-#ifndef HOST
-#include <furi.h>
-#include <furi_hal_gpio.h>
-#else
-typedef char FuriString;
-#endif
-
 #include <stddef.h>
 #include <inttypes.h>
+#include <stdbool.h>
+#include "debug.hpp"
+
+#ifdef HOST
+// Host system version - minimal string implementation
+class FuriString {
+public:
+    FuriString(const char* str = nullptr)
+        : data(str) {
+    }
+    const char* getData() const {
+        return data;
+    }
+
+private:
+    const char* data;
+};
+
+inline FuriString* furi_string_alloc() {
+    return new FuriString();
+}
+inline void furi_string_free(FuriString* str) {
+    delete str;
+}
+inline FuriString* furi_string_alloc_set(const char* str) {
+    return new FuriString(str);
+}
+#else
+#include <furi.h>
+#include <furi_hal_gpio.h>
+#endif
 
 /**
  * @brief Movement types for agitation sequence
@@ -82,7 +104,7 @@ typedef struct {
 /**
  * @brief Dynamic version of movement
  */
-typedef struct AgitationMovement AgitationMovement;
+typedef struct AgitationMovement_ AgitationMovement_;
 
 struct AgitationMovement_ {
     AgitationMovementType type;
@@ -96,6 +118,28 @@ struct AgitationMovement_ {
             size_t sequence_length;
         } loop;
     };
+
+#ifdef HOST
+    void print() const {
+        switch(type) {
+        case AgitationMovementTypeCW:
+            DEBUG_PRINT("CW movement, duration: %u", duration);
+            break;
+        case AgitationMovementTypeCCW:
+            DEBUG_PRINT("CCW movement, duration: %u", duration);
+            break;
+        case AgitationMovementTypePause:
+            DEBUG_PRINT("Pause, duration: %u", duration);
+            break;
+        case AgitationMovementTypeLoop:
+            DEBUG_PRINT("Loop, count: %u, sequence length: %zu", loop.count, loop.sequence_length);
+            break;
+        case AgitationMovementTypeWaitUser:
+            DEBUG_PRINT("Wait for user");
+            break;
+        }
+    }
+#endif
 };
 
 /**
@@ -107,6 +151,18 @@ typedef struct {
     float temperature;
     AgitationMovement_* sequence;
     size_t sequence_length;
+
+#ifdef HOST
+    void print() const {
+        DEBUG_PRINT("Step: %s", name->getData());
+        DEBUG_PRINT("Description: %s", description->getData());
+        DEBUG_PRINT("Temperature: %.1f°C", temperature);
+        DEBUG_PRINT("Sequence (%zu movements):", sequence_length);
+        for(size_t i = 0; i < sequence_length; i++) {
+            sequence[i].print();
+        }
+    }
+#endif
 } AgitationStep;
 
 /**
@@ -120,6 +176,20 @@ typedef struct {
     float temperature;
     AgitationStep* steps;
     size_t steps_length;
+
+#ifdef HOST
+    void print() const {
+        DEBUG_PRINT("Process: %s", process_name->getData());
+        DEBUG_PRINT("Film Type: %s", film_type->getData());
+        DEBUG_PRINT("Tank Type: %s", tank_type->getData());
+        DEBUG_PRINT("Chemistry: %s", chemistry->getData());
+        DEBUG_PRINT("Temperature: %.1f°C", temperature);
+        DEBUG_PRINT("Steps (%zu):", steps_length);
+        for(size_t i = 0; i < steps_length; i++) {
+            steps[i].print();
+        }
+    }
+#endif
 } AgitationProcess;
 
 //------------------------------------------------------------------------------
@@ -129,12 +199,12 @@ typedef struct {
 /**
  * @brief Standard inversion sequence
  */
-#define AGITATION_STANDARD_INVERSION                             \
-    {                                                            \
-        {.type = AgitationMovementTypeCW, .duration = 1},        \
-            {.type = AgitationMovementTypePause, .duration = 1}, \
-            {.type = AgitationMovementTypeCCW, .duration = 1},   \
-            {.type = AgitationMovementTypePause, .duration = 1}, \
+#define AGITATION_STANDARD_INVERSION                         \
+    {                                                        \
+        {.type = AgitationMovementTypeCW, .duration = 1},    \
+        {.type = AgitationMovementTypePause, .duration = 1}, \
+        {.type = AgitationMovementTypeCCW, .duration = 1},   \
+        {.type = AgitationMovementTypePause, .duration = 1}, \
     }
 
 /**
@@ -154,7 +224,7 @@ typedef struct {
                       {.type = AgitationMovementTypePause, .duration = 1}, \
                   },                                                       \
               .sequence_length = 4}},                                      \
-            {.type = AgitationMovementTypePause, .duration = 24},          \
+        {.type = AgitationMovementTypePause, .duration = 24},              \
     }
 
 //------------------------------------------------------------------------------

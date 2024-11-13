@@ -5,10 +5,12 @@
 #include "loop_movement.hpp"
 #include "wait_user_movement.hpp"
 #include <array>
+#include <new>
 
 class MovementFactory {
 public:
     static constexpr size_t MAX_MOVEMENTS = 64;
+    static constexpr size_t MAX_SEQUENCE_LENGTH = 32;
 
     static AgitationMovement* createCW(uint32_t duration) {
         return new(allocateMovement(sizeof(MotorMovement)))
@@ -25,12 +27,21 @@ public:
     }
 
     static AgitationMovement* createLoop(
-        AgitationMovement** sequence,
+        const AgitationMovement** sequence,
         size_t sequence_length,
         uint32_t iterations,
         uint32_t max_duration) {
+        // Allocate space for the sequence array first
+        auto sequence_storage = new(allocateMovement(sizeof(AgitationMovement*) * MAX_SEQUENCE_LENGTH)) 
+            AgitationMovement*[MAX_SEQUENCE_LENGTH];
+        
+        // Copy the sequence
+        for(size_t i = 0; i < sequence_length; i++) {
+            sequence_storage[i] = const_cast<AgitationMovement*>(sequence[i]);
+        }
+        
         return new(allocateMovement(sizeof(LoopMovement)))
-            LoopMovement(sequence, sequence_length, iterations, max_duration);
+            LoopMovement(sequence_storage, sequence_length, iterations, max_duration);
     }
 
     static AgitationMovement* createWaitUser() {
