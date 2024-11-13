@@ -66,4 +66,6 @@ private:
   size_t current_movement_index;
 
   uint32_t time_remaining;
+
+  bool movement_completed_previous_tick;
 };

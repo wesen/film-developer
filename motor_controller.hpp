@@ -6,6 +6,11 @@ public:
   virtual void counterClockwise(bool enable) = 0;
   virtual void stop() = 0;
   virtual bool isRunning() const = 0;
+  virtual const char *getDirectionString() const = 0;
+  virtual bool isClockwise() const = 0;
+  virtual bool isCounterClockwise() const = 0;
+  virtual bool isStopped() const = 0;
+
   virtual ~MotorController() = default;
 
   // Prevent copying for all derived classes

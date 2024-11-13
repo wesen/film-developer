@@ -125,19 +125,22 @@ void AgitationProcessInterpreter::confirm() {
 }
 
 void AgitationProcessInterpreter::advanceToNextStep() {
-  if (current_step_index < process->steps_length) {
-    DEBUG_PRINT("Advancing to next step: %s",
-                process->steps[current_step_index + 1].name);
-    current_step_index++;
-    process_state = AgitationProcessState::Idle;
-    sequence_length = 0;
-    current_movement_index = 0;
+  if (!(current_step_index + 1 < process->steps_length)) {
+    DEBUG_PRINT("Cannot advance to next step, already at last step");
+    return;
+  }
+  DEBUG_PRINT("Advancing to next step: %s, current step index: %lu/%lu  ",
+              process->steps[current_step_index + 1].name,
+              current_step_index + 1, process->steps_length);
+  current_step_index++;
+  process_state = AgitationProcessState::Idle;
+  sequence_length = 0;
+  current_movement_index = 0;
 
-    // Reset all movements in current sequence
-    for (size_t i = 0; i < sequence_length; i++) {
-      if (loaded_sequence[i]) {
-        loaded_sequence[i]->reset();
-      }
+  // Reset all movements in current sequence
+  for (size_t i = 0; i < sequence_length; i++) {
+    if (loaded_sequence[i]) {
+      loaded_sequence[i]->reset();
     }
   }
 }
@@ -191,8 +194,8 @@ const char *AgitationProcessInterpreter::getUserMessage() const {
 
 void AgitationProcessInterpreter::advanceToNextMovement() {
   if (current_movement_index < sequence_length) {
-    DEBUG_PRINT("Advancing to next movement: %lu/%lu", current_movement_index + 1,
-                sequence_length);
+    DEBUG_PRINT("Advancing to next movement: %lu/%lu",
+                current_movement_index + 1, sequence_length);
 
     current_movement_index++;
     if (current_movement_index < sequence_length &&

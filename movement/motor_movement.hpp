@@ -5,29 +5,35 @@ class MotorMovement final : public AgitationMovement {
 public:
     explicit MotorMovement(Type type, uint32_t duration)
         : AgitationMovement(type, duration) {
-        if (type != Type::CW && type != Type::CCW) {
+        if(type != Type::CW && type != Type::CCW) {
             // In production code, we might want to handle this error differently
             type = Type::CW;
         }
     }
 
     bool execute(MotorController& motor) override {
-        if (elapsed_time >= duration) {
+        if(elapsed_time >= duration) {
             return false;
         }
 
-        DEBUG_PRINT("Executing MotorMovement: %s | Elapsed: %u/%u", 
+        DEBUG_PRINT(
+            "Executing MotorMovement: %s | Elapsed: %u/%u",
             type == Type::CW ? "CW" : "CCW",
             elapsed_time + 1,
             duration);
 
-        if (type == Type::CW) {
+        if(type == Type::CW) {
             motor.clockwise(true);
         } else {
             motor.counterClockwise(true);
         }
 
         elapsed_time++;
+
+        if(elapsed_time >= duration) {
+            return false;
+        }
+
         return true;
     }
 
@@ -40,10 +46,11 @@ public:
     }
 
     void print() const override {
-        DEBUG_PRINT("MotorMovement: %s | Duration: %u ticks | Elapsed: %u | Remaining: %u", 
+        DEBUG_PRINT(
+            "MotorMovement: %s | Duration: %u ticks | Elapsed: %u | Remaining: %u",
             type == Type::CW ? "CW" : "CCW",
             duration,
             elapsed_time,
             duration > elapsed_time ? duration - elapsed_time : 0);
     }
-}; 
+};

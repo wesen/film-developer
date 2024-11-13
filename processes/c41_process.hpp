@@ -10,10 +10,10 @@
  * @brief C41 Pre-Wash (Optional warm rinse)
  */
 static const AgitationMovementStatic C41_PRE_WASH[] = {
-    {.type = AgitationMovementTypeCW, .duration = 5},
-    {.type = AgitationMovementTypePause, .duration = 1},
-    {.type = AgitationMovementTypeCCW, .duration = 5},
-    {.type = AgitationMovementTypePause, .duration = 1},
+    {.type = AgitationMovementTypeCW, .duration = 2},
+    {.type = AgitationMovementTypePause, .duration = 3},
+    {.type = AgitationMovementTypeCCW, .duration = 2},
+    {.type = AgitationMovementTypePause, .duration = 3},
     {.type = AgitationMovementTypeWaitUser,
      .message = "Pre-wash complete. Ready for developer?"},
 };
@@ -23,8 +23,9 @@ static const AgitationMovementStatic C41_MINUTE_CYCLE[] = {
     // wait 50 seconds,
     // continuous agitation for 10 seconds
     {
-        .type = AgitationMovementTypePause, .duration = 50,
-        // .duration = 4,
+        .type = AgitationMovementTypePause,
+        // .duration = 50,
+        .duration = 4,
     },
     {.type = AgitationMovementTypeLoop,
      .loop = {.count = 0,
@@ -42,8 +43,8 @@ static const size_t C41_MINUTE_CYCLE_LENGTH = 2;
 static const AgitationMovementStatic C41_COLOR_DEVELOPER[] = {
     {.type = AgitationMovementTypeLoop,
      .loop = {.count = 0,
-              .max_duration = 210,
-              //   .max_duration = 12,
+              //   .max_duration = 210,
+              .max_duration = 25,
               .sequence =
                   (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
               .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
@@ -58,7 +59,8 @@ static const size_t C41_COLOR_DEVELOPER_LENGTH = 2;
 static const AgitationMovementStatic C41_BLEACH_SEQUENCE[] = {
     {.type = AgitationMovementTypeLoop,
      .loop = {.count = 3,
-              .max_duration = 60 * 5,
+              //   .max_duration = 60 * 5,
+              .max_duration = 5,
               .sequence =
                   (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
               .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
