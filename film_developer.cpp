@@ -38,18 +38,6 @@ typedef struct {
 } FilmDeveloperApp;
 
 // Add motor control callback wrappers
-static void motor_cw_callback(bool enable) {
-    FilmDeveloperApp* app = static_cast<FilmDeveloperApp*>(furi_record_open("film_developer"));
-    app->motor_controller->clockwise(enable);
-    furi_record_close("film_developer");
-}
-
-static void motor_ccw_callback(bool enable) {
-    FilmDeveloperApp* app = static_cast<FilmDeveloperApp*>(furi_record_open("film_developer"));
-    app->motor_controller->counterClockwise(enable);
-    furi_record_close("film_developer");
-}
-
 static void draw_callback(Canvas* canvas, void* context) {
     FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
@@ -69,8 +57,7 @@ static void draw_callback(Canvas* canvas, void* context) {
             canvas,
             2,
             36,
-            app->process_interpreter.getUserMessage() ? app->process_interpreter.getUserMessage() :
-                                                      "Press OK to continue");
+            app->process_interpreter.getUserMessage());
     } else {
         canvas_draw_str(canvas, 2, 36, app->status_text);
     }
@@ -119,9 +106,10 @@ static void timer_callback(void* context) {
         snprintf(
             app->status_text,
             sizeof(app->status_text),
-            "%s Time left: %lus",
+            "%s Time: %lus/%lus",
             app->paused ? "[PAUSED]" : "",
-            app->process_interpreter.getTimeRemaining());
+            app->process_interpreter.getCurrentMovementTimeElapsed(), 
+            app->process_interpreter.getCurrentMovementDuration());
 
         // Update movement text based on motor controller state
         const char* movement_str = "Idle";
