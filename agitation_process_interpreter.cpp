@@ -50,6 +50,12 @@ void AgitationProcessInterpreter::initializeMovementSequence(
     return;
   }
 
+  for (size_t i = 0; i < sequence_length; i++) {
+    if (loaded_sequence[i]) {
+      loaded_sequence[i]->reset();
+    }
+  }
+
   DEBUG_PRINT("Loaded movement sequence with %zu movements\n", sequence_length);
 }
 
@@ -120,6 +126,8 @@ void AgitationProcessInterpreter::confirm() {
 
 void AgitationProcessInterpreter::advanceToNextStep() {
   if (current_step_index < process->steps_length) {
+    DEBUG_PRINT("Advancing to next step: %s",
+                process->steps[current_step_index + 1].name);
     current_step_index++;
     process_state = AgitationProcessState::Idle;
     sequence_length = 0;
@@ -183,10 +191,28 @@ const char *AgitationProcessInterpreter::getUserMessage() const {
 
 void AgitationProcessInterpreter::advanceToNextMovement() {
   if (current_movement_index < sequence_length) {
+    DEBUG_PRINT("Advancing to next movement: %lu/%lu", current_movement_index + 1,
+                sequence_length);
+
     current_movement_index++;
     if (current_movement_index < sequence_length &&
         loaded_sequence[current_movement_index]) {
       loaded_sequence[current_movement_index]->reset();
     }
   }
+}
+
+const AgitationStepStatic *AgitationProcessInterpreter::getCurrentStep() const {
+  if (!process || current_step_index >= process->steps_length) {
+    return nullptr;
+  }
+  return &process->steps[current_step_index];
+}
+
+const AgitationMovement *
+AgitationProcessInterpreter::getCurrentMovement() const {
+  if (current_movement_index >= sequence_length) {
+    return nullptr;
+  }
+  return loaded_sequence[current_movement_index];
 }

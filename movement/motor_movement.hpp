@@ -16,6 +16,11 @@ public:
             return false;
         }
 
+        DEBUG_PRINT("Executing MotorMovement: %s | Elapsed: %u/%u", 
+            type == Type::CW ? "CW" : "CCW",
+            elapsed_time + 1,
+            duration);
+
         if (type == Type::CW) {
             motor.clockwise(true);
         } else {
@@ -35,9 +40,10 @@ public:
     }
 
     void print() const override {
-        DEBUG_PRINT("MotorMovement: %s for %u ticks (elapsed: %u)", 
+        DEBUG_PRINT("MotorMovement: %s | Duration: %u ticks | Elapsed: %u | Remaining: %u", 
             type == Type::CW ? "CW" : "CCW",
             duration,
-            elapsed_time);
+            elapsed_time,
+            duration > elapsed_time ? duration - elapsed_time : 0);
     }
 }; 

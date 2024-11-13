@@ -8,12 +8,19 @@ public:
     }
 
     bool execute(MotorController& motor) override {
+        DEBUG_PRINT("Executing PauseMovement | Elapsed: %u/%u", elapsed_time + 1, duration);
+
         if(elapsed_time >= duration) {
             return false;
         }
 
         motor.stop();
         elapsed_time++;
+
+        if(elapsed_time >= duration) {
+            DEBUG_PRINT("PauseMovement completed");
+            return false;
+        }
         return true;
     }
 
@@ -22,10 +29,15 @@ public:
     }
 
     void reset() override {
+        DEBUG_PRINT("Resetting PauseMovement");
         elapsed_time = 0;
     }
 
     void print() const override {
-        DEBUG_PRINT("PauseMovement: duration %u ticks (elapsed: %u)", duration, elapsed_time);
+        DEBUG_PRINT(
+            "PauseMovement | Duration: %u ticks | Elapsed: %u | Remaining: %u",
+            duration,
+            elapsed_time,
+            duration > elapsed_time ? duration - elapsed_time : 0);
     }
 };

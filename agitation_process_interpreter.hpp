@@ -39,6 +39,10 @@ public:
   // Advances to the next movement in the current sequence
   void advanceToNextMovement();
 
+  // New helper methods
+  const AgitationStepStatic* getCurrentStep() const;
+  const AgitationMovement* getCurrentMovement() const;
+
 private:
   void initializeMovementSequence(const AgitationStepStatic *step);
 

@@ -6,6 +6,10 @@ public:
     WaitUserMovement() : AgitationMovement(Type::WaitUser) {}
 
     bool execute(MotorController& motor) override {
+        DEBUG_PRINT("Executing WaitUserMovement | State: %s | Elapsed: %u", 
+            user_acknowledged ? "acknowledged" : "waiting",
+            elapsed_time + 1);
+
         motor.stop();
         return !user_acknowledged;
     }
@@ -23,8 +27,9 @@ public:
     }
 
     void print() const override {
-        DEBUG_PRINT("WaitUserMovement: %s", 
-            user_acknowledged ? "acknowledged" : "waiting");
+        DEBUG_PRINT("WaitUserMovement | State: %s | Elapsed: %u", 
+            user_acknowledged ? "acknowledged" : "waiting",
+            elapsed_time);
     }
 
 private:

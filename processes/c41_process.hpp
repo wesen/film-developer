@@ -14,20 +14,25 @@ static const AgitationMovementStatic C41_PRE_WASH[] = {
     {.type = AgitationMovementTypePause, .duration = 1},
     {.type = AgitationMovementTypeCCW, .duration = 5},
     {.type = AgitationMovementTypePause, .duration = 1},
-    {.type = AgitationMovementTypeWaitUser, .message = "Pre-wash complete. Ready for developer?"},
+    {.type = AgitationMovementTypeWaitUser,
+     .message = "Pre-wash complete. Ready for developer?"},
 };
 static const size_t C41_PRE_WASH_LENGTH = 5;
 
 static const AgitationMovementStatic C41_MINUTE_CYCLE[] = {
     // wait 50 seconds,
     // continuous agitation for 10 seconds
-    {.type = AgitationMovementTypePause, .duration = 50},
+    {
+        .type = AgitationMovementTypePause, .duration = 50,
+        // .duration = 4,
+    },
     {.type = AgitationMovementTypeLoop,
-     .loop =
-         {.count = 0,
-          .max_duration = 10,
-          .sequence = (const struct AgitationMovementStatic*)CONTINUOUS_GENTLE_SEQ,
-          .sequence_length = CONTINUOUS_GENTLE_SEQ_LENGTH}},
+     .loop = {.count = 0,
+              .max_duration = 10,
+              //   .max_duration = 3,
+              .sequence =
+                  (const struct AgitationMovementStatic *)CONTINUOUS_GENTLE_SEQ,
+              .sequence_length = CONTINUOUS_GENTLE_SEQ_LENGTH}},
 };
 static const size_t C41_MINUTE_CYCLE_LENGTH = 2;
 
@@ -36,12 +41,14 @@ static const size_t C41_MINUTE_CYCLE_LENGTH = 2;
  */
 static const AgitationMovementStatic C41_COLOR_DEVELOPER[] = {
     {.type = AgitationMovementTypeLoop,
-     .loop =
-         {.count = 0,
-          .max_duration = 210,
-          .sequence = (const struct AgitationMovementStatic*)C41_MINUTE_CYCLE,
-          .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
-    {.type = AgitationMovementTypeWaitUser, .message = "Development complete. Ready for bleach?"},
+     .loop = {.count = 0,
+              .max_duration = 210,
+              //   .max_duration = 12,
+              .sequence =
+                  (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
+              .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
+    {.type = AgitationMovementTypeWaitUser,
+     .message = "Development complete. Ready for bleach?"},
 };
 static const size_t C41_COLOR_DEVELOPER_LENGTH = 2;
 
@@ -50,13 +57,14 @@ static const size_t C41_COLOR_DEVELOPER_LENGTH = 2;
  */
 static const AgitationMovementStatic C41_BLEACH_SEQUENCE[] = {
     {.type = AgitationMovementTypeLoop,
-     .loop =
-         {.count = 3,
-          .max_duration = 60 * 5,
-          .sequence = (const struct AgitationMovementStatic*)C41_MINUTE_CYCLE,
-          .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
+     .loop = {.count = 3,
+              .max_duration = 60 * 5,
+              .sequence =
+                  (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
+              .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
     {.type = AgitationMovementTypePause, .duration = 15},
-    {.type = AgitationMovementTypeWaitUser, .message = "Bleach complete. Ready for stabilizer?"},
+    {.type = AgitationMovementTypeWaitUser,
+     .message = "Bleach complete. Ready for stabilizer?"},
 };
 static const size_t C41_BLEACH_LENGTH = 3;
 
@@ -68,7 +76,8 @@ static const AgitationMovementStatic C41_STABILIZER[] = {
     {.type = AgitationMovementTypePause, .duration = 1},
     {.type = AgitationMovementTypeCCW, .duration = 3},
     {.type = AgitationMovementTypePause, .duration = 1},
-    {.type = AgitationMovementTypeWaitUser, .message = "Process complete! Remove film."},
+    {.type = AgitationMovementTypeWaitUser,
+     .message = "Process complete! Remove film."},
 };
 static const size_t C41_STABILIZER_LENGTH = 5;
 
@@ -91,7 +100,8 @@ static const AgitationStepStatic C41_PRE_WASH_STEP = {
  */
 static const AgitationStepStatic C41_COLOR_DEVELOPER_STEP = {
     .name = "Color Developer",
-    .description = "Main color development stage with continuous gentle agitation",
+    .description =
+        "Main color development stage with continuous gentle agitation",
     .temperature = 38.0f,
     .sequence = C41_COLOR_DEVELOPER,
     .sequence_length = C41_COLOR_DEVELOPER_LENGTH};
@@ -117,8 +127,9 @@ static const AgitationStepStatic C41_STABILIZER_STEP = {
     .sequence_length = C41_STABILIZER_LENGTH};
 
 // C41 Full Process Static Steps
-static const AgitationStepStatic C41_FULL_PROCESS_STEPS[] =
-    {C41_PRE_WASH_STEP, C41_COLOR_DEVELOPER_STEP, C41_BLEACH_STEP, C41_STABILIZER_STEP};
+static const AgitationStepStatic C41_FULL_PROCESS_STEPS[] = {
+    C41_PRE_WASH_STEP, C41_COLOR_DEVELOPER_STEP, C41_BLEACH_STEP,
+    C41_STABILIZER_STEP};
 
 /**
  * @brief Complete C41 Development Process
