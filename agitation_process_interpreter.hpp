@@ -1,7 +1,7 @@
 #pragma once
 
-#include "agitation_sequence.h"
-#include "agitation_interpreter.h"
+#include "agitation_sequence.hpp"
+#include "agitation_interpreter.hpp"
 
 typedef enum {
     AgitationProcessStateIdle,

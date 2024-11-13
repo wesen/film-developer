@@ -82,7 +82,9 @@ typedef struct {
 /**
  * @brief Dynamic version of movement
  */
-typedef struct {
+typedef struct AgitationMovement AgitationMovement;
+
+struct AgitationMovement {
     AgitationMovementType type;
     union {
         // For regular movements
@@ -94,7 +96,7 @@ typedef struct {
             size_t sequence_length;
         } loop;
     };
-} AgitationMovement;
+};
 
 /**
  * @brief Dynamic version of step

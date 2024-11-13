@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_sequences.h"
+#include "common_sequences.hpp"
 
 //------------------------------------------------------------------------------
 // Continuous Gentle Agitation Process
@@ -13,6 +13,7 @@ static const AgitationMovementStatic CONTINUOUS_GENTLE[] = {
     {.type = AgitationMovementTypeLoop,
      .loop = {
          .count = 0, // Continuous
+         .max_duration = 0,
          .sequence = (const struct AgitationMovementStatic*)CONTINUOUS_GENTLE_SEQ,
          .sequence_length = CONTINUOUS_GENTLE_SEQ_LENGTH}}};
 static const size_t CONTINUOUS_GENTLE_LENGTH = 1;
@@ -40,4 +41,4 @@ static const AgitationProcessStatic CONTINUOUS_GENTLE_STATIC = {
     .chemistry = "Various",
     .temperature = 38.0f,
     .steps = CONTINUOUS_GENTLE_STEPS,
-    .steps_length = 1}; 
+    .steps_length = 1};

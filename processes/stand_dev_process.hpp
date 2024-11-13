@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_sequences.h"
+#include "common_sequences.hpp"
 
 //------------------------------------------------------------------------------
 // Stand Development Process
@@ -13,6 +13,7 @@ static const AgitationMovementStatic STAND_DEV_INITIAL_SEQUENCE[] = {
     {.type = AgitationMovementTypeLoop,
      .loop = {
          .count = 3,
+         .max_duration = 0,
          .sequence = (const struct AgitationMovementStatic*)STANDARD_INVERSION,
          .sequence_length = STANDARD_INVERSION_LENGTH}}};
 
@@ -52,4 +53,4 @@ static const AgitationProcessStatic STAND_DEV_STATIC = {
     .chemistry = "B&W Developer",
     .temperature = 20.0f,
     .steps = STAND_DEV_STEPS,
-    .steps_length = 2}; 
+    .steps_length = 2};

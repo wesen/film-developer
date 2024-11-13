@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_sequences.h"
+#include "common_sequences.hpp"
 
 //------------------------------------------------------------------------------
 // Color Development Sequences - C41 Process

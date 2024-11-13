@@ -1,5 +1,5 @@
 #include <string.h>
-#include "agitation_interpreter.h"
+#include "agitation_interpreter.hpp"
 
 // #define DEBUG 1
 

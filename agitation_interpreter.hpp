@@ -1,6 +1,6 @@
 #pragma once
 
-#include "agitation_sequence.h"
+#include "agitation_sequence.hpp"
 
 #define MAX_LOOP_DEPTH  3
 #define LOOP_CONTINUOUS 0

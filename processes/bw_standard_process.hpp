@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_sequences.h"
+#include "common_sequences.hpp"
 
 //------------------------------------------------------------------------------
 // B&W Development Sequences as Steps
@@ -12,9 +12,12 @@
 static const AgitationMovementStatic INITIAL_AGITATION[] = {
     {.type = AgitationMovementTypeLoop,
      .loop =
-         {.count = 4,
-          .sequence = (const struct AgitationMovementStatic*)STANDARD_INVERSION,
-          .sequence_length = STANDARD_INVERSION_LENGTH}},
+         {
+             .count = 4,
+             .max_duration = 0,
+             .sequence = (const struct AgitationMovementStatic*)STANDARD_INVERSION,
+             .sequence_length = STANDARD_INVERSION_LENGTH,
+         }},
     {.type = AgitationMovementTypePause, .duration = 24},
 };
 static const size_t INITIAL_AGITATION_LENGTH = 2;
@@ -33,6 +36,7 @@ static const AgitationMovementStatic BW_PERIODIC_AGITATION_SEQUENCE[] = {
     {.type = AgitationMovementTypeLoop,
      .loop = {
          .count = 2,
+         .max_duration = 0,
          .sequence = (const struct AgitationMovementStatic*)STANDARD_INVERSION,
          .sequence_length = STANDARD_INVERSION_LENGTH}}};
 
@@ -58,4 +62,4 @@ static const AgitationProcessStatic BW_STANDARD_DEV_STATIC = {
     .chemistry = "B&W Developer",
     .temperature = 20.0f,
     .steps = BW_STANDARD_DEV_STEPS,
-    .steps_length = 2}; 
+    .steps_length = 2};

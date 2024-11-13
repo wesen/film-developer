@@ -1,6 +1,6 @@
 #include <string.h>
 #include <stdio.h>
-#include "agitation_process_interpreter.h"
+#include "agitation_process_interpreter.hpp"
 
 #define DEBUG 1
 

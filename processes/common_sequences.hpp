@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../agitation_sequence.h"
+#include "../agitation_sequence.hpp"
 
 //------------------------------------------------------------------------------
 // Common Base Sequences

@@ -3,9 +3,9 @@
 #include <gui/gui.h>
 #include <gui/elements.h>
 #include <gui/view_port.h>
-#include "agitation_sequence.h"
-#include "agitation_process_interpreter.h"
-#include "agitation_processes.h"
+#include "agitation_sequence.hpp"
+#include "agitation_processes.hpp"
+#include "agitation_process_interpreter.hpp"
 
 #include "io.h"
 
@@ -30,7 +30,7 @@ typedef struct {
 } FilmDeveloperApp;
 
 static void draw_callback(Canvas* canvas, void* context) {
-    FilmDeveloperApp* app = context;
+    FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
@@ -83,7 +83,7 @@ static void draw_callback(Canvas* canvas, void* context) {
 }
 
 static void timer_callback(void* context) {
-    FilmDeveloperApp* app = context;
+    FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
     if(app->process_active && !app->paused) {
         // Tick the process interpreter
@@ -152,7 +152,7 @@ static void timer_callback(void* context) {
 }
 
 static void input_callback(InputEvent* input_event, void* context) {
-    FilmDeveloperApp* app = context;
+    FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
     if(input_event->type == InputTypeShort) {
         if(input_event->key == InputKeyOk) {
@@ -205,9 +205,13 @@ static void input_callback(InputEvent* input_event, void* context) {
     }
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int32_t film_developer_app(void* p) {
     UNUSED(p);
-    FilmDeveloperApp* app = malloc(sizeof(FilmDeveloperApp));
+    FilmDeveloperApp* app = (FilmDeveloperApp*)malloc(sizeof(FilmDeveloperApp));
 
     // Initialize GPIO
     gpio_init();
@@ -216,7 +220,7 @@ int32_t film_developer_app(void* p) {
     app->event_loop = furi_event_loop_alloc();
 
     // Create GUI
-    app->gui = furi_record_open(RECORD_GUI);
+    app->gui = (Gui*)furi_record_open(RECORD_GUI);
     app->view_port = view_port_alloc();
     view_port_draw_callback_set(app->view_port, draw_callback, app);
     view_port_input_callback_set(app->view_port, input_callback, app);
@@ -252,3 +256,7 @@ int32_t film_developer_app(void* p) {
 
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
