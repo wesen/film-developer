@@ -24,7 +24,7 @@ typedef struct {
     MotorController* motor_controller;
 
     // Process state
-    AgitationProcessInterpreterState process_state;
+    AgitationProcessInterpreter process_interpreter;
     const AgitationProcessStatic* current_process;
     bool process_active;
 
@@ -64,19 +64,19 @@ static void draw_callback(Canvas* canvas, void* context) {
     canvas_draw_str(canvas, 2, 24, app->step_text);
 
     // Draw status or user message
-    if(app->process_state.waiting_for_user) {
+    if(app->process_interpreter.isWaitingForUser()) {
         canvas_draw_str(
             canvas,
             2,
             36,
-            app->process_state.user_message ? app->process_state.user_message :
-                                              "Press OK to continue");
+            app->process_interpreter.getUserMessage() ? app->process_interpreter.getUserMessage() :
+                                                      "Press OK to continue");
     } else {
         canvas_draw_str(canvas, 2, 36, app->status_text);
     }
 
     // Draw movement state if not waiting for user
-    if(!app->process_state.waiting_for_user) {
+    if(!app->process_interpreter.isWaitingForUser()) {
         canvas_draw_str(canvas, 2, 48, app->movement_text);
     }
 
@@ -89,7 +89,7 @@ static void draw_callback(Canvas* canvas, void* context) {
 
     // Draw control hints
     if(app->process_active) {
-        if(app->process_state.waiting_for_user) {
+        if(app->process_interpreter.isWaitingForUser()) {
             elements_button_center(canvas, "Continue");
         } else if(app->paused) {
             elements_button_center(canvas, "Resume");
@@ -107,56 +107,26 @@ static void timer_callback(void* context) {
     FilmDeveloperApp* app = (FilmDeveloperApp*)context;
 
     if(app->process_active && !app->paused) {
-        bool still_active = agitation_process_interpreter_tick(&app->process_state);
+        bool still_active = app->process_interpreter.tick();
 
         // Update status texts
         const AgitationStepStatic* current_step =
-            &app->current_process->steps[app->process_state.current_step_index];
+            &app->current_process->steps[app->process_interpreter.getCurrentStepIndex()];
 
         snprintf(app->step_text, sizeof(app->step_text), "Step: %s", current_step->name);
 
-        // Get current loop info if in a loop
-        if(app->process_state.movement_interpreter.loop_depth > 0) {
-            // Show elapsed time in current loop
-            uint32_t elapsed =
-                app->process_state.movement_interpreter
-                    .loop_stack[app->process_state.movement_interpreter.loop_depth - 1]
-                    .elapsed_duration;
-            uint32_t max_duration =
-                app->process_state.movement_interpreter
-                    .loop_stack[app->process_state.movement_interpreter.loop_depth - 1]
-                    .max_duration;
-
-            if(max_duration > 0) {
-                snprintf(
-                    app->status_text,
-                    sizeof(app->status_text),
-                    "%s Time: %lus/%lus",
-                    app->paused ? "[PAUSED]" : "",
-                    elapsed,
-                    max_duration);
-            } else {
-                snprintf(
-                    app->status_text,
-                    sizeof(app->status_text),
-                    "%s Time: %lus",
-                    app->paused ? "[PAUSED]" : "",
-                    elapsed);
-            }
-        } else {
-            // Show remaining time for current movement
-            snprintf(
-                app->status_text,
-                sizeof(app->status_text),
-                "%s Time left: %lus",
-                app->paused ? "[PAUSED]" : "",
-                app->process_state.movement_interpreter.time_remaining);
-        }
+        // Show remaining time for current movement
+        snprintf(
+            app->status_text,
+            sizeof(app->status_text),
+            "%s Time left: %lus",
+            app->paused ? "[PAUSED]" : "",
+            app->process_interpreter.getTimeRemaining());
 
         // Update movement text based on motor controller state
         const char* movement_str = "Idle";
         if(app->motor_controller->isRunning()) {
-            movement_str = "Running"; // You may want to add direction detection to MotorController
+            movement_str = "Running";
         }
         snprintf(app->movement_text, sizeof(app->movement_text), "Movement: %s", movement_str);
 
@@ -176,17 +146,12 @@ static void input_callback(InputEvent* input_event, void* context) {
         if(input_event->key == InputKeyOk) {
             if(!app->process_active) {
                 // Start new process
-                agitation_process_interpreter_init(
-                    &app->process_state,
-                    &C41_FULL_PROCESS_STATIC,
-                    app->motor_controller, // Pass motor controller
-                    motor_cw_callback,
-                    motor_ccw_callback);
+                app->process_interpreter.init(&C41_FULL_PROCESS_STATIC, app->motor_controller);
                 app->process_active = true;
                 app->paused = false;
-            } else if(app->process_state.waiting_for_user) {
+            } else if(app->process_interpreter.isWaitingForUser()) {
                 // Handle user confirmation
-                agitation_process_interpreter_confirm(&app->process_state);
+                app->process_interpreter.confirm();
             } else {
                 // Toggle pause
                 app->paused = !app->paused;
@@ -196,21 +161,17 @@ static void input_callback(InputEvent* input_event, void* context) {
             }
         } else if(app->process_active && input_event->key == InputKeyRight) {
             // Skip to next step (only if not waiting for user)
-            if(!app->process_state.waiting_for_user) {
+            if(!app->process_interpreter.isWaitingForUser()) {
                 app->motor_controller->stop();
-                app->process_state.current_step_index++;
-                app->process_state.process_state = AgitationProcessStateIdle;
-                if(app->process_state.current_step_index >= app->current_process->steps_length) {
+                app->process_interpreter.skipToNextStep();
+                if(app->process_interpreter.getCurrentStepIndex() >= app->current_process->steps_length) {
                     app->process_active = false;
                 }
             }
         } else if(app->process_active && input_event->key == InputKeyLeft) {
             // Restart current step
             app->motor_controller->stop();
-            agitation_process_interpreter_init(
-                &app->process_state, app->current_process, motor_cw_callback, motor_ccw_callback);
-            app->process_state.current_step_index =
-                app->process_state.current_step_index; // Stay on current step
+            app->process_interpreter.reset();
         }
     } else if(input_event->type == InputTypeShort && input_event->key == InputKeyBack) {
         if(app->process_active) {
