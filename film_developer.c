@@ -4,8 +4,10 @@
 #include <gui/elements.h>
 #include <gui/view_port.h>
 #include "agitation_sequence.h"
-#include "agitation_processes.h"
 #include "agitation_process_interpreter.h"
+#include "agitation_processes.h"
+
+#include "io.h"
 
 typedef struct {
     FuriEventLoop* event_loop;
@@ -25,44 +27,10 @@ typedef struct {
 
     // Additional state tracking
     bool paused;
-} GpioLoopApp;
-
-// Define our GPIO pins (active low)
-const GpioPin* const pin_cw = &gpio_ext_pa7;
-const GpioPin* const pin_ccw = &gpio_ext_pa6;
-
-static void motor_stop() {
-    // Set both pins high (inactive) for active low
-    furi_hal_gpio_write(pin_cw, true);
-    furi_hal_gpio_write(pin_ccw, true);
-}
-
-static void motor_cw_callback(bool enable) {
-    if(enable) {
-        // Safety check - ensure other motor is stopped first
-        furi_hal_gpio_write(pin_ccw, true); // Disable CCW
-        furi_delay_us(1000); // 1ms delay for safety
-        furi_hal_gpio_write(pin_cw, false); // Enable CW (active low)
-    } else {
-        furi_hal_gpio_write(pin_cw, true); // Disable CW
-    }
-}
-
-// foobar
-
-static void motor_ccw_callback(bool enable) {
-    if(enable) {
-        // Safety check - ensure other motor is stopped first
-        furi_hal_gpio_write(pin_cw, true); // Disable CW
-        furi_delay_us(1000); // 1ms delay for safety
-        furi_hal_gpio_write(pin_ccw, false); // Enable CCW (active low)
-    } else {
-        furi_hal_gpio_write(pin_ccw, true); // Disable CCW
-    }
-}
+} FilmDeveloperApp;
 
 static void draw_callback(Canvas* canvas, void* context) {
-    GpioLoopApp* app = context;
+    FilmDeveloperApp* app = context;
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
@@ -115,7 +83,7 @@ static void draw_callback(Canvas* canvas, void* context) {
 }
 
 static void timer_callback(void* context) {
-    GpioLoopApp* app = context;
+    FilmDeveloperApp* app = context;
 
     if(app->process_active && !app->paused) {
         // Tick the process interpreter
@@ -184,7 +152,7 @@ static void timer_callback(void* context) {
 }
 
 static void input_callback(InputEvent* input_event, void* context) {
-    GpioLoopApp* app = context;
+    FilmDeveloperApp* app = context;
 
     if(input_event->type == InputTypeShort) {
         if(input_event->key == InputKeyOk) {
@@ -237,21 +205,9 @@ static void input_callback(InputEvent* input_event, void* context) {
     }
 }
 
-static void gpio_init() {
-    furi_hal_gpio_init_simple(pin_cw, GpioModeOutputPushPull);
-    furi_hal_gpio_init_simple(pin_ccw, GpioModeOutputPushPull);
-    motor_stop(); // Initialize both pins to inactive state
-}
-
-static void gpio_deinit() {
-    motor_stop(); // Ensure motors are stopped
-    furi_hal_gpio_init_simple(pin_cw, GpioModeAnalog);
-    furi_hal_gpio_init_simple(pin_ccw, GpioModeAnalog);
-}
-
-int32_t gpio_loop_app(void* p) {
+int32_t film_developer_app(void* p) {
     UNUSED(p);
-    GpioLoopApp* app = malloc(sizeof(GpioLoopApp));
+    FilmDeveloperApp* app = malloc(sizeof(FilmDeveloperApp));
 
     // Initialize GPIO
     gpio_init();

@@ -1,12 +1,12 @@
 App(
-    appid="gpio_loop",
-    name="GPIO Loop Demo",
+    appid="film_developer",
+    name="Film Developer",
     apptype=FlipperAppType.EXTERNAL,
-    entry_point="gpio_loop_app",
+    entry_point="film_developer_app",
     stack_size=2 * 1024,
     fap_category="GPIO",
     fap_author="Community",
-    fap_weburl="https://github.com/flipperdevices/flipperzero-firmware/tree/dev/applications_user/gpio_loop",
+    fap_weburl="https://github.com/go-go-golems/film-developer",
     fap_version="1.0",
-    fap_description="GPIO pin cycling demo with timing",
+    fap_description="Agitation for film development",
 )
