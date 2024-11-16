@@ -41,13 +41,7 @@ static const size_t C41_MINUTE_CYCLE_LENGTH = 2;
  * @brief C41 Color Developer Stage (Continuous Gentle Agitation)
  */
 static const AgitationMovementStatic C41_COLOR_DEVELOPER[] = {
-    {.type = AgitationMovementTypeLoop,
-     .loop = {.count = 0,
-              //   .max_duration = 210,
-              .max_duration = 25,
-              .sequence =
-                  (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
-              .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
+    {.type = AgitationMovementTypeCW, .duration = 210},
     {.type = AgitationMovementTypeWaitUser,
      .message = "Development complete. Ready for bleach?"},
 };
@@ -57,18 +51,11 @@ static const size_t C41_COLOR_DEVELOPER_LENGTH = 2;
  * @brief C41 Bleach Stage (Periodic Gentle Agitation)
  */
 static const AgitationMovementStatic C41_BLEACH_SEQUENCE[] = {
-    {.type = AgitationMovementTypeLoop,
-     .loop = {.count = 3,
-              //   .max_duration = 60 * 5,
-              .max_duration = 5,
-              .sequence =
-                  (const struct AgitationMovementStatic *)C41_MINUTE_CYCLE,
-              .sequence_length = C41_MINUTE_CYCLE_LENGTH}},
-    {.type = AgitationMovementTypePause, .duration = 15},
+    {.type = AgitationMovementTypeCW, .duration = 480},
     {.type = AgitationMovementTypeWaitUser,
-     .message = "Bleach complete. Ready for stabilizer?"},
+     .message = "Bleach complete. Process finished!"},
 };
-static const size_t C41_BLEACH_LENGTH = 3;
+static const size_t C41_BLEACH_LENGTH = 2;
 
 /**
  * @brief C41 Stabilizer/Final Rinse Stage (Gentle Agitation)
@@ -130,8 +117,8 @@ static const AgitationStepStatic C41_STABILIZER_STEP = {
 
 // C41 Full Process Static Steps
 static const AgitationStepStatic C41_FULL_PROCESS_STEPS[] = {
-    C41_PRE_WASH_STEP, C41_COLOR_DEVELOPER_STEP, C41_BLEACH_STEP,
-    C41_STABILIZER_STEP};
+    C41_COLOR_DEVELOPER_STEP, C41_BLEACH_STEP
+};
 
 /**
  * @brief Complete C41 Development Process
@@ -143,4 +130,5 @@ static const AgitationProcessStatic C41_FULL_PROCESS_STATIC = {
     .chemistry = "C41 Color Chemistry",
     .temperature = 38.0f,
     .steps = C41_FULL_PROCESS_STEPS,
-    .steps_length = 4};
+    .steps_length = 2
+};

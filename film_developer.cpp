@@ -2,10 +2,12 @@
 #include "agitation_processes.hpp"
 #include "agitation_sequence.hpp"
 #include "motor_controller.hpp"
+#include "views/main_view.hpp"
 #include <furi.h>
 #include <furi_hal_gpio.h>
 #include <gui/elements.h>
 #include <gui/gui.h>
+#include <gui/view_dispatcher.h>
 #include <gui/view_port.h>
 
 #ifdef HOST
@@ -14,10 +16,18 @@
 #include "embedded/motor_controller_embedded.hpp"
 #endif
 
+#include "views/pause_menu_view.hpp"
+
+typedef enum {
+  FilmDeveloperViewMain,
+  FilmDeveloperViewPauseMenu,
+} FilmDeveloperView;
+
 typedef struct {
-  FuriEventLoop *event_loop;
-  ViewPort *view_port;
   Gui *gui;
+  ViewDispatcher *view_dispatcher;
+  ViewPort *view_port;
+  FuriEventLoop *event_loop;
   FuriEventLoopTimer *state_timer;
 
   // Add motor controller
@@ -35,6 +45,8 @@ typedef struct {
 
   // Additional state tracking
   bool paused;
+
+  PauseMenuView *pause_menu;
 } FilmDeveloperApp;
 
 // Add motor control callback wrappers
@@ -91,7 +103,7 @@ static void draw_callback(Canvas *canvas, void *context) {
 static void timer_callback(void *context) {
   FilmDeveloperApp *app = (FilmDeveloperApp *)context;
 
-  if (app->process_active && !app->paused) {
+  if (!app->paused) {
     bool still_active = app->process_interpreter.tick();
 
     // Update status texts
@@ -136,11 +148,14 @@ static void input_callback(InputEvent *input_event, void *context) {
         // Handle user confirmation
         app->process_interpreter.confirm();
       } else {
-        // Toggle pause
-        app->paused = !app->paused;
-        if (app->paused) {
-          app->motor_controller->stop();
-        }
+        // Toggle pause and show pause menu
+        app->paused = true;
+        app->motor_controller->stop();
+        app->pause_menu->update_time(
+            app->process_interpreter.getCurrentMovementTimeElapsed(),
+            app->process_interpreter.getCurrentMovementDuration());
+        view_dispatcher_switch_to_view(app->view_dispatcher,
+                                       FilmDeveloperViewPauseMenu);
       }
     } else if (app->process_active && input_event->key == InputKeyRight) {
       // Skip to next step (only if not waiting for user)
@@ -170,6 +185,38 @@ static void input_callback(InputEvent *input_event, void *context) {
   }
 }
 
+// Add pause menu callbacks
+static void pause_menu_rewind_callback(void *context) {
+  FilmDeveloperApp *app = static_cast<FilmDeveloperApp *>(context);
+  app->process_interpreter.reset();
+  app->paused = false;
+  view_dispatcher_switch_to_view(app->view_dispatcher, FilmDeveloperViewMain);
+}
+
+static void pause_menu_skip_callback(void *context) {
+  FilmDeveloperApp *app = static_cast<FilmDeveloperApp *>(context);
+  app->process_interpreter.skipToNextStep();
+  app->paused = false;
+  view_dispatcher_switch_to_view(app->view_dispatcher, FilmDeveloperViewMain);
+}
+
+static void pause_menu_back_callback(void *context) {
+  FilmDeveloperApp *app = static_cast<FilmDeveloperApp *>(context);
+  app->paused = false;
+  view_dispatcher_switch_to_view(app->view_dispatcher, FilmDeveloperViewMain);
+}
+
+// Add view switching callbacks
+static bool film_developer_navigation_event_callback(void *context) {
+  FilmDeveloperApp *app = (FilmDeveloperApp *)context;
+  if (app->paused) {
+    app->paused = false;
+    view_dispatcher_switch_to_view(app->view_dispatcher, FilmDeveloperViewMain);
+    return true;
+  }
+  return false;
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -178,10 +225,10 @@ int32_t film_developer_app(void *p) {
   UNUSED(p);
   FilmDeveloperApp *app = (FilmDeveloperApp *)malloc(sizeof(FilmDeveloperApp));
 
+  // Initialize motor controller
   MotorControllerEmbedded motorController;
   motorController.initGpio();
 
-  // Create appropriate motor controller
 #ifdef HOST
   app->motor_controller = new MockController();
 #else
@@ -194,17 +241,37 @@ int32_t film_developer_app(void *p) {
   // Create event loop
   app->event_loop = furi_event_loop_alloc();
 
-  // Create GUI
+  // Initialize GUI
   app->gui = (Gui *)furi_record_open(RECORD_GUI);
+
+  // Initialize ViewDispatcher
+  app->view_dispatcher = view_dispatcher_alloc();
+  view_dispatcher_enable_queue(app->view_dispatcher);
+  view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
+  view_dispatcher_set_navigation_event_callback(
+      app->view_dispatcher, film_developer_navigation_event_callback);
+
+  // Initialize ViewPort for main view
   app->view_port = view_port_alloc();
   view_port_draw_callback_set(app->view_port, draw_callback, app);
   view_port_input_callback_set(app->view_port, input_callback, app);
-  gui_add_view_port(app->gui, app->view_port, GuiLayerFullscreen);
 
-  // Create timer
-  app->state_timer = furi_event_loop_timer_alloc(
-      app->event_loop, timer_callback, FuriEventLoopTimerTypePeriodic, app);
-  furi_event_loop_timer_start(app->state_timer, 1000); // 1 second intervals
+  // Initialize pause menu
+  app->pause_menu = new PauseMenuView();
+  app->pause_menu->set_rewind_callback(pause_menu_rewind_callback, app);
+  app->pause_menu->set_skip_callback(pause_menu_skip_callback, app);
+  app->pause_menu->set_back_callback(pause_menu_back_callback, app);
+
+  // Add views to dispatcher
+  MainView *main_view = new MainView();
+  view_dispatcher_add_view(app->view_dispatcher, FilmDeveloperViewMain,
+                           main_view->get_view());
+  view_dispatcher_add_view(app->view_dispatcher, FilmDeveloperViewPauseMenu,
+                           app->pause_menu->get_view());
+
+  // Attach ViewDispatcher to GUI
+  view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui,
+                                ViewDispatcherTypeFullscreen);
 
   // Set initial state
   app->current_process = &C41_FULL_PROCESS_STATIC;
@@ -214,16 +281,25 @@ int32_t film_developer_app(void *p) {
   snprintf(app->step_text, sizeof(app->step_text), "Ready");
   snprintf(app->movement_text, sizeof(app->movement_text), "Movement: Idle");
 
-  // furi_assert(false, "Hello");
+  // Switch to main view
+  view_dispatcher_switch_to_view(app->view_dispatcher, FilmDeveloperViewMain);
+
+  // Start timer
+  app->state_timer = furi_event_loop_timer_alloc(
+      app->event_loop, timer_callback, FuriEventLoopTimerTypePeriodic, app);
+  furi_event_loop_timer_start(app->state_timer, 1000);
 
   // Run event loop
-  furi_event_loop_run(app->event_loop);
+  view_dispatcher_run(app->view_dispatcher);
 
   // Cleanup
   furi_event_loop_timer_free(app->state_timer);
+  view_dispatcher_remove_view(app->view_dispatcher, FilmDeveloperViewMain);
+  view_dispatcher_remove_view(app->view_dispatcher, FilmDeveloperViewPauseMenu);
   view_port_enabled_set(app->view_port, false);
-  gui_remove_view_port(app->gui, app->view_port);
   view_port_free(app->view_port);
+  delete app->pause_menu;
+  view_dispatcher_free(app->view_dispatcher);
   furi_record_close(RECORD_GUI);
   furi_event_loop_free(app->event_loop);
 
@@ -232,7 +308,6 @@ int32_t film_developer_app(void *p) {
   furi_record_destroy("film_developer");
 
   free(app);
-
   return 0;
 }
 
